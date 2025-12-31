@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Player Tests</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        h1 {
+            color: #333;
+        }
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎵 Modular Music Player - Automated Tests</h1>
+    <div id="results"></div>
+    <div id="summary" class="summary"></div>
+
+    <script type="module">
+        import Track from './src/models/Track.js';
+        import Playlist from './src/models/Playlist.js';
+        import PlaybackState from './src/models/PlaybackState.js';
+        import PlayerEngine from './src/core/PlayerEngine.js';
+        import QueueManager from './src/core/QueueManager.js';
+
+        const results = document.getElementById('results');
+        const summary = document.getElementById('summary');
+        let passCount = 0;
+        let failCount = 0;
+
+        function logResult(testName, passed, details = '') {
+            const div = document.createElement('div');
+            div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            div.textContent = `${passed ? '✓' : '✗'} ${testName}${details ? ': ' + details : ''}`;
+            results.appendChild(div);
+            if (passed) passCount++;
+            else failCount++;
+        }
+
+        function assert(condition, testName, details = '') {
+            logResult(testName, condition, details);
+            if (!condition) {
+                console.error(`Test failed: ${testName}`, details);
+            }
+        }
+
+        console.log('Starting tests...');
+
+        // Test 1: Track Model
+        console.log('Testing Track model...');
+        const track1 = new Track({
+            id: '1',
+            title: 'Test Song',
+            artist: 'Test Artist',
+            duration: 185,
+            url: 'test.mp3'
+        });
+        assert(track1.title === 'Test Song', 'Track model - title property');
+        assert(track1.artist === 'Test Artist', 'Track model - artist property');
+        assert(track1.duration === 185, 'Track model - duration property');
+        assert(track1.getFormattedDuration() === '3:05', 'Track model - formatted duration', `got ${track1.getFormattedDuration()}`);
+
+        // Test 2: Playlist Model
+        console.log('Testing Playlist model...');
+        const playlist = new Playlist({
+            id: 'test-playlist',
+            name: 'Test Playlist',
+            tracks: []
+        });
+        assert(playlist.name === 'Test Playlist', 'Playlist model - name property');
+        assert(playlist.getTrackCount() === 0, 'Playlist model - initial track count');
+        
+        playlist.addTrack(track1);
+        assert(playlist.getTrackCount() === 1, 'Playlist model - track added');
+        
+        const track2 = new Track({
+            id: '2',
+            title: 'Song 2',
+            artist: 'Artist 2',
+            duration: 200,
+            url: 'test2.mp3'
+        });
+        playlist.addTrack(track2);
+        assert(playlist.getTrackCount() === 2, 'Playlist model - multiple tracks');
+        
+        const removed = playlist.removeTrack('1');
+        assert(removed === true, 'Playlist model - track removed');
+        assert(playlist.getTrackCount() === 1, 'Playlist model - count after removal');
+
+        // Test 3: PlaybackState
+        console.log('Testing PlaybackState...');
+        assert(PlaybackState.PLAYING === 'PLAYING', 'PlaybackState - PLAYING state');
+        assert(PlaybackState.PAUSED === 'PAUSED', 'PlaybackState - PAUSED state');
+        assert(PlaybackState.STOPPED === 'STOPPED', 'PlaybackState - STOPPED state');
+        assert(PlaybackState.LOADING === 'LOADING', 'PlaybackState - LOADING state');
+
+        // Test 4: QueueManager
+        console.log('Testing QueueManager...');
+        const queueManager = new QueueManager();
+        const testPlaylist = new Playlist({
+            id: 'queue-test',
+            name: 'Queue Test',
+            tracks: [
+                new Track({ id: 'q1', title: 'Q1', artist: 'A1', duration: 100, url: 'q1.mp3' }),
+                new Track({ id: 'q2', title: 'Q2', artist: 'A2', duration: 100, url: 'q2.mp3' }),
+                new Track({ id: 'q3', title: 'Q3', artist: 'A3', duration: 100, url: 'q3.mp3' })
+            ]
+        });
+        queueManager.setPlaylist(testPlaylist);
+        assert(queueManager.getTrackCount() === 3, 'QueueManager - playlist set');
+        
+        queueManager.jumpToTrack(0);
+        const current = queueManager.getCurrentTrack();
+        assert(current !== null && current.id === 'q1', 'QueueManager - jump to track');
+        
+        const next = queueManager.next();
+        assert(next !== null && next.id === 'q2', 'QueueManager - next track');
+        
+        const prev = queueManager.previous();
+        assert(prev !== null && prev.id === 'q1', 'QueueManager - previous track');
+        
+        assert(queueManager.hasNext() === true, 'QueueManager - has next');
+        assert(queueManager.hasPrevious() === false, 'QueueManager - has previous at start');
+        
+        queueManager.setRepeat(true);
+        assert(queueManager.repeat === true, 'QueueManager - repeat mode enabled');
+        
+        queueManager.setShuffle(true);
+        assert(queueManager.shuffle === true, 'QueueManager - shuffle mode enabled');
+
+        // Test 5: PlayerEngine
+        console.log('Testing PlayerEngine...');
+        const player = new PlayerEngine();
+        assert(player.getState() === PlaybackState.STOPPED, 'PlayerEngine - initial state');
+        assert(player.getCurrentTrack() === null, 'PlayerEngine - no track initially');
+        
+        player.setVolume(0.5);
+        assert(player.getVolume() === 0.5, 'PlayerEngine - volume control', `got ${player.getVolume()}`);
+        
+        const qm = player.getQueueManager();
+        assert(qm !== null, 'PlayerEngine - queue manager accessible');
+        
+        qm.setPlaylist(testPlaylist);
+        qm.jumpToTrack(0);
+        assert(qm.getCurrentTrack().id === 'q1', 'PlayerEngine - queue integration');
+
+        // Test 6: Event System
+        console.log('Testing Event System...');
+        let eventFired = false;
+        player.on('volumechange', (volume) => {
+            eventFired = true;
+        });
+        player.setVolume(0.7);
+        assert(eventFired === true, 'Event system - volume change event');
+
+        // Test 7: Track Navigation
+        console.log('Testing Track Navigation...');
+        const navTrack = qm.jumpToTrackById('q2');
+        assert(navTrack !== null && navTrack.id === 'q2', 'Track navigation - jump by ID');
+        
+        qm.setRepeat(true); // Enable repeat for this test
+        qm.jumpToTrack(2); // Last track
+        const hasNextAtEnd = qm.hasNext();
+        assert(hasNextAtEnd === true, 'Track navigation - has next with repeat', 'repeat is enabled');
+
+        // Test 8: Integration Test
+        console.log('Testing Integration...');
+        const integrationPlayer = new PlayerEngine();
+        const integrationPlaylist = new Playlist({
+            id: 'integration',
+            name: 'Integration Test',
+            tracks: [
+                new Track({ id: 'i1', title: 'Integration 1', artist: 'Test', duration: 120, url: 'i1.mp3' })
+            ]
+        });
+        integrationPlayer.getQueueManager().setPlaylist(integrationPlaylist);
+        integrationPlayer.getQueueManager().jumpToTrack(0);
+        
+        const currentTrack = integrationPlayer.getQueueManager().getCurrentTrack();
+        assert(currentTrack !== null, 'Integration - full flow works');
+
+        // Display Summary
+        const total = passCount + failCount;
+        const passRate = ((passCount / total) * 100).toFixed(1);
+        summary.innerHTML = `
+            <div>Tests Complete!</div>
+            <div>Passed: ${passCount} / ${total} (${passRate}%)</div>
+            <div>Failed: ${failCount} / ${total}</div>
+            <div style="margin-top: 10px; color: ${failCount === 0 ? '#155724' : '#721c24'}">
+                ${failCount === 0 ? '🎉 All tests passed!' : '⚠️ Some tests failed'}
+            </div>
+        `;
+
+        console.log(`Tests complete: ${passCount} passed, ${failCount} failed`);
+    </script>
+</body>
+</html>

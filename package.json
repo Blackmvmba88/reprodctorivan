@@ -1,0 +1,25 @@
+{
+  "name": "modular-music-player",
+  "version": "1.0.0",
+  "description": "A fully modular music player application with clean architecture",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "dev": "python3 -m http.server 8000"
+  },
+  "keywords": [
+    "music",
+    "player",
+    "audio",
+    "modular",
+    "playlist",
+    "queue"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Blackmvmba88/reprodctorivan.git"
+  }
+}
