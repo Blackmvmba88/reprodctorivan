@@ -1,7 +1,13 @@
 import Playlist from '../models/Playlist.js';
+import ProbabilityEngine from '../runtime/ProbabilityEngine.js';
 
 /**
- * Queue Manager for handling playback queue and playlist management
+ * Queue Manager - Orchestrates playlist state and probability-based selection
+ * 
+ * Instead of linear playback, maintains a probability field that responds to:
+ * - User behavior patterns
+ * - Listening context
+ * - Energy and flow states
  */
 class QueueManager {
   /**
@@ -13,6 +19,10 @@ class QueueManager {
     this.repeat = false;
     this.shuffle = false;
     this.shuffledIndices = [];
+    
+    // Runtime components
+    this.probabilityEngine = new ProbabilityEngine();
+    this.probabilityMode = false; // Can be toggled
   }
 
   /**
@@ -23,6 +33,9 @@ class QueueManager {
     this.playlist = playlist;
     this.currentIndex = -1;
     this._updateShuffledIndices();
+    
+    // Initialize probability engine with new tracks
+    this.probabilityEngine.initializeTracks(playlist.tracks);
   }
 
   /**
@@ -61,13 +74,27 @@ class QueueManager {
 
   /**
    * Move to next track
+   * @param {Object} [context] - Optional listening context for probability-based selection
    * @returns {Track|null} Next track or null
    */
-  next() {
+  next(context = null) {
     if (this.playlist.getTrackCount() === 0) {
       return null;
     }
 
+    // Probability-based selection if enabled and context provided
+    if (this.probabilityMode && context) {
+      const nextTrack = this.probabilityEngine.selectNextTrack(this.playlist.tracks, context);
+      if (nextTrack) {
+        const newIndex = this.playlist.tracks.findIndex(t => t.id === nextTrack.id);
+        if (newIndex !== -1) {
+          this.currentIndex = newIndex;
+          return nextTrack;
+        }
+      }
+    }
+
+    // Standard sequential or shuffle mode
     if (this.currentIndex < this.playlist.getTrackCount() - 1) {
       this.currentIndex++;
     } else if (this.repeat) {
@@ -204,6 +231,31 @@ class QueueManager {
     this.playlist.clear();
     this.currentIndex = -1;
     this.shuffledIndices = [];
+  }
+
+  /**
+   * Enable or disable probability-based track selection
+   * @param {boolean} enabled - Enable probability mode
+   */
+  setProbabilityMode(enabled) {
+    this.probabilityMode = enabled;
+  }
+
+  /**
+   * Get probability engine instance
+   * @returns {ProbabilityEngine} Probability engine
+   */
+  getProbabilityEngine() {
+    return this.probabilityEngine;
+  }
+
+  /**
+   * Update track weight based on listening feedback
+   * @param {string} trackId - Track ID
+   * @param {Object} feedback - Listening feedback
+   */
+  updateTrackFeedback(trackId, feedback) {
+    this.probabilityEngine.updateTrackWeight(trackId, feedback);
   }
 }
 

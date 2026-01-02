@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modular Music Player Demo</title>
+    <title>Music Runtime Engine Demo</title>
     <style>
         * {
             margin: 0;
@@ -259,8 +259,8 @@
     <div>
         <div id="player-container"></div>
         <div class="demo-info">
-            <h1>🎵 Modular Music Player</h1>
-            <p>A fully modular music player with clean architecture</p>
+            <h1>🌀 Music Runtime Engine</h1>
+            <p>Orchestrating states, not just playback</p>
         </div>
     </div>
 
@@ -309,6 +309,9 @@
         const player = new PlayerEngine();
         player.getQueueManager().setPlaylist(playlist);
 
+        // Enable probability mode (optional - can toggle this)
+        // player.getQueueManager().setProbabilityMode(true);
+
         // Create UI
         const container = document.getElementById('player-container');
         const ui = new PlayerUI(player, container);
@@ -331,6 +334,27 @@
 
         player.on('error', (error) => {
             console.error('Player error:', error);
+        });
+
+        // Log runtime state periodically
+        setInterval(() => {
+            const state = player.getRuntimeState();
+            console.log('🌀 Runtime State:', {
+                energy: state.energy.toFixed(2),
+                flow: state.flow.toFixed(2),
+                runtimeTime: state.runtimeTime.toFixed(1) + 's',
+                audioTime: state.audioTime.toFixed(1) + 's'
+            });
+        }, 10000);
+
+        // Log interaction metrics
+        player.on('volumechange', () => {
+            const metrics = player.getInteractionTracker().getMetrics();
+            console.log('📊 Interaction Metrics:', {
+                volumeChangeFreq: metrics.volumeChangeFrequency.toFixed(2),
+                skipRate: metrics.skipRate.toFixed(2),
+                interactionDensity: metrics.interactionDensity.toFixed(2)
+            });
         });
     </script>
 </body>

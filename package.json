@@ -1,7 +1,7 @@
 {
-  "name": "modular-music-player",
-  "version": "1.0.0",
-  "description": "A fully modular music player application with clean architecture",
+  "name": "music-runtime-engine",
+  "version": "2.0.0",
+  "description": "A Music Runtime Engine that orchestrates states, not playback - featuring probability-based selection, interaction tracking, and emergent behavior",
   "type": "module",
   "main": "src/index.js",
   "scripts": {
@@ -10,11 +10,17 @@
   },
   "keywords": [
     "music",
-    "player",
+    "runtime-engine",
+    "probability",
+    "emergent-behavior",
+    "consciousness",
     "audio",
     "modular",
     "playlist",
-    "queue"
+    "queue",
+    "interaction-tracking",
+    "flow-state",
+    "temporal-decoupling"
   ],
   "author": "",
   "license": "MIT",
