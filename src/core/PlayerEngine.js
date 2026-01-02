@@ -33,19 +33,21 @@ class PlayerEngine {
     this._trackStartTime = 0;
     
     // Start runtime clock
-    this._startClockTick();
+    this._clockInterval = setInterval(() => {
+      this.runtimeClock.tick();
+    }, 100); // Tick every 100ms
     
     this._setupAudioEngineListeners();
   }
 
   /**
-   * Start runtime clock tick
-   * @private
+   * Clean up resources
    */
-  _startClockTick() {
-    setInterval(() => {
-      this.runtimeClock.tick();
-    }, 100); // Tick every 100ms
+  destroy() {
+    if (this._clockInterval) {
+      clearInterval(this._clockInterval);
+      this._clockInterval = null;
+    }
   }
 
   /**

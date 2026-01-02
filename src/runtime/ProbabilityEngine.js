@@ -15,6 +15,10 @@ class ProbabilityEngine {
     this.baseWeight = 1.0;
     this.recentTracks = []; // Recently played track IDs
     this.maxRecentTracks = 5;
+    
+    // Constants for weight bounds
+    this.MIN_WEIGHT = 0.1;
+    this.MAX_WEIGHT = 5.0;
   }
 
   /**
@@ -97,13 +101,13 @@ class ProbabilityEngine {
     
     for (const track of tracks) {
       cumulative += probabilities.get(track.id) || 0;
-      if (random <= cumulative) {
+      if (random < cumulative) {
         this._recordSelection(track.id);
         return track;
       }
     }
 
-    // Fallback to last track (should rarely happen)
+    // Fallback to last track (should rarely happen due to floating point)
     const fallback = tracks[tracks.length - 1];
     this._recordSelection(fallback.id);
     return fallback;
@@ -146,7 +150,7 @@ class ProbabilityEngine {
     }
 
     // Keep weights in reasonable bounds
-    currentWeight = Math.max(0.1, Math.min(currentWeight, 5.0));
+    currentWeight = Math.max(this.MIN_WEIGHT, Math.min(currentWeight, this.MAX_WEIGHT));
     
     this.trackWeights.set(trackId, currentWeight);
   }

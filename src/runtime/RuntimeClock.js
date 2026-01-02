@@ -14,6 +14,10 @@ class RuntimeClock {
     this.lastUpdate = Date.now();
     this.paused = false;
     this.events = [];
+    
+    // Constants for time scale bounds
+    this.MIN_TIME_SCALE = 0.1;
+    this.MAX_TIME_SCALE = 2.0;
   }
 
   /**
@@ -72,7 +76,7 @@ class RuntimeClock {
    * @param {number} scale - Time scale factor (1.0 = normal)
    */
   setTimeScale(scale) {
-    this.timeScale = Math.max(0.1, Math.min(scale, 2.0));
+    this.timeScale = Math.max(this.MIN_TIME_SCALE, Math.min(scale, this.MAX_TIME_SCALE));
   }
 
   /**

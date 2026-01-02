@@ -29,6 +29,10 @@ class InteractionTracker {
     this.startTime = Date.now();
     this.currentTrackStart = null;
     this.currentTrackDuration = 0;
+    
+    // Constants for activity calculation
+    this.RECENT_ACTIVITY_THRESHOLD_MINUTES = 5;
+    this.MAX_INACTIVITY_MINUTES = 30;
   }
 
   /**
@@ -141,7 +145,9 @@ class InteractionTracker {
       ? (now - this.interactions.lastInteractionTime) / (1000 * 60) // minutes
       : Infinity;
     
-    const recentActivity = timeSinceLastInteraction < 5 ? 1 : Math.max(0, 1 - timeSinceLastInteraction / 30);
+    const recentActivity = timeSinceLastInteraction < this.RECENT_ACTIVITY_THRESHOLD_MINUTES 
+      ? 1 
+      : Math.max(0, 1 - timeSinceLastInteraction / this.MAX_INACTIVITY_MINUTES);
     const volumeActivity = Math.min(this.metrics.volumeChangeFrequency / 2, 1);
     const pauseActivity = Math.min(this.metrics.pauseFrequency / 3, 1);
     
