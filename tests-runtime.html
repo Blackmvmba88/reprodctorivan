@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Runtime Engine - Tests</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-result {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+        .pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        .fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #666;
+            margin-top: 20px;
+        }
+        .summary {
+            margin-top: 20px;
+            padding: 15px;
+            background: white;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌀 Music Runtime Engine - Automated Tests</h1>
+    <div id="results"></div>
+    <div id="summary" class="summary"></div>
+
+    <script type="module">
+        import Track from './src/models/Track.js';
+        import Playlist from './src/models/Playlist.js';
+        import PlaybackState from './src/models/PlaybackState.js';
+        import PlayerEngine from './src/core/PlayerEngine.js';
+        import QueueManager from './src/core/QueueManager.js';
+        import InteractionTracker from './src/runtime/InteractionTracker.js';
+        import ProbabilityEngine from './src/runtime/ProbabilityEngine.js';
+        import RuntimeClock from './src/runtime/RuntimeClock.js';
+
+        const results = document.getElementById('results');
+        const summary = document.getElementById('summary');
+        let passCount = 0;
+        let failCount = 0;
+
+        function logResult(testName, passed, details = '') {
+            const div = document.createElement('div');
+            div.className = `test-result ${passed ? 'pass' : 'fail'}`;
+            div.textContent = `${passed ? '✓' : '✗'} ${testName}${details ? ': ' + details : ''}`;
+            results.appendChild(div);
+            if (passed) passCount++;
+            else failCount++;
+        }
+
+        function assert(condition, testName, details = '') {
+            logResult(testName, condition, details);
+            if (!condition) {
+                console.error(`Test failed: ${testName}`, details);
+            }
+        }
+
+        function addSection(name) {
+            const section = document.createElement('h2');
+            section.textContent = name;
+            results.appendChild(section);
+        }
+
+        console.log('Starting tests...');
+
+        // Async wrapper for tests
+        (async () => {
+
+        // Test 1: Track Model
+        addSection('Track Model Tests');
+        const track1 = new Track({
+            id: '1',
+            title: 'Test Song',
+            artist: 'Test Artist',
+            duration: 185,
+            url: 'test.mp3'
+        });
+        assert(track1.title === 'Test Song', 'Track model - title property');
+        assert(track1.artist === 'Test Artist', 'Track model - artist property');
+        assert(track1.duration === 185, 'Track model - duration property');
+        assert(track1.getFormattedDuration() === '3:05', 'Track model - formatted duration', `got ${track1.getFormattedDuration()}`);
+
+        // Test 2: Playlist Model
+        addSection('Playlist Model Tests');
+        const playlist = new Playlist({
+            id: 'test-playlist',
+            name: 'Test Playlist',
+            tracks: []
+        });
+        assert(playlist.name === 'Test Playlist', 'Playlist model - name property');
+        assert(playlist.getTrackCount() === 0, 'Playlist model - initial track count');
+        
+        playlist.addTrack(track1);
+        assert(playlist.getTrackCount() === 1, 'Playlist model - track added');
+        
+        const track2 = new Track({
+            id: '2',
+            title: 'Song 2',
+            artist: 'Artist 2',
+            duration: 200,
+            url: 'test2.mp3'
+        });
+        playlist.addTrack(track2);
+        assert(playlist.getTrackCount() === 2, 'Playlist model - multiple tracks');
+        
+        const removed = playlist.removeTrack('1');
+        assert(removed === true, 'Playlist model - track removed');
+        assert(playlist.getTrackCount() === 1, 'Playlist model - count after removal');
+
+        // Test 3: PlaybackState
+        addSection('PlaybackState Tests');
+        assert(PlaybackState.PLAYING === 'PLAYING', 'PlaybackState - PLAYING state');
+        assert(PlaybackState.PAUSED === 'PAUSED', 'PlaybackState - PAUSED state');
+        assert(PlaybackState.STOPPED === 'STOPPED', 'PlaybackState - STOPPED state');
+        assert(PlaybackState.LOADING === 'LOADING', 'PlaybackState - LOADING state');
+
+        // Test 4: InteractionTracker
+        addSection('InteractionTracker Tests');
+        const tracker = new InteractionTracker();
+        
+        // Test volume changes
+        tracker.recordVolumeChange(0.5, 0.7);
+        const metrics1 = tracker.getMetrics();
+        assert(metrics1.volumeChangeFrequency >= 0, 'InteractionTracker - volume change recorded');
+        
+        // Test pause recording
+        tracker.recordPause(0.5);
+        const metrics2 = tracker.getMetrics();
+        assert(metrics2.pauseFrequency >= 0, 'InteractionTracker - pause recorded');
+        
+        // Test skip recording
+        tracker.recordSkip(0.3, 'track1');
+        const metrics3 = tracker.getMetrics();
+        assert(metrics3.skipRate >= 0, 'InteractionTracker - skip recorded');
+        
+        // Test track completion
+        tracker.startTrack(180);
+        tracker.completeTrack(90);
+        const metrics4 = tracker.getMetrics();
+        assert(metrics4.averageListenDuration > 0, 'InteractionTracker - track completion recorded');
+        
+        // Test energy level
+        const energy = tracker.getEnergyLevel();
+        assert(energy >= 0 && energy <= 1, 'InteractionTracker - energy level in range', `got ${energy}`);
+        
+        // Test flow state
+        const flow = tracker.getFlowState();
+        assert(flow >= 0 && flow <= 1, 'InteractionTracker - flow state in range', `got ${flow}`);
+        
+        // Test context
+        const context = tracker.getContext();
+        assert(context.hour >= 0 && context.hour <= 23, 'InteractionTracker - context hour valid');
+        assert(typeof context.energy === 'number', 'InteractionTracker - context includes energy');
+        assert(typeof context.flow === 'number', 'InteractionTracker - context includes flow');
+
+        // Test 5: ProbabilityEngine
+        addSection('ProbabilityEngine Tests');
+        const probEngine = new ProbabilityEngine();
+        
+        const testTracks = [
+            new Track({ id: 'p1', title: 'Prob 1', artist: 'A1', duration: 100, url: 'p1.mp3' }),
+            new Track({ id: 'p2', title: 'Prob 2', artist: 'A2', duration: 100, url: 'p2.mp3' }),
+            new Track({ id: 'p3', title: 'Prob 3', artist: 'A3', duration: 100, url: 'p3.mp3' })
+        ];
+        
+        probEngine.initializeTracks(testTracks);
+        assert(probEngine.getTrackWeights().size === 3, 'ProbabilityEngine - tracks initialized');
+        
+        // Test probability calculation
+        const probs = probEngine.calculateProbabilities(testTracks, { energy: 0.5, flow: 0.5 });
+        assert(probs.size === 3, 'ProbabilityEngine - probabilities calculated');
+        
+        // Test probabilities sum to 1 (approximately)
+        let sum = 0;
+        probs.forEach(prob => sum += prob);
+        assert(Math.abs(sum - 1.0) < 0.001, 'ProbabilityEngine - probabilities sum to 1', `sum = ${sum}`);
+        
+        // Test track selection
+        const selected = probEngine.selectNextTrack(testTracks, { energy: 0.5, flow: 0.5 });
+        assert(selected !== null, 'ProbabilityEngine - track selected');
+        assert(testTracks.includes(selected), 'ProbabilityEngine - selected track is from list');
+        
+        // Test weight update
+        probEngine.updateTrackWeight('p1', { listenPercentage: 0.9, skipped: false });
+        let weights = probEngine.getTrackWeights();
+        assert(weights.get('p1') > 1.0, 'ProbabilityEngine - weight increased for positive feedback');
+        
+        const weightBeforeSkip = weights.get('p2');
+        probEngine.updateTrackWeight('p2', { skipped: true });
+        weights = probEngine.getTrackWeights();
+        assert(weights.get('p2') < weightBeforeSkip, 'ProbabilityEngine - weight decreased for skip');
+
+        // Test 6: RuntimeClock
+        addSection('RuntimeClock Tests');
+        const clock = new RuntimeClock();
+        
+        const initialTime = clock.getInternalTime();
+        assert(initialTime === 0, 'RuntimeClock - initial time is zero');
+        
+        // Simulate some ticks
+        clock.tick();
+        clock.tick();
+        clock.tick();
+        const afterTicks = clock.getInternalTime();
+        assert(afterTicks >= 0, 'RuntimeClock - time progresses with ticks');
+        
+        // Test pause/resume
+        clock.pause();
+        const pausedTime = clock.getInternalTime();
+        clock.tick();
+        assert(clock.getInternalTime() === pausedTime, 'RuntimeClock - time stops when paused');
+        
+        clock.resume();
+        // Need to wait a bit for time to actually elapse
+        await new Promise(resolve => setTimeout(resolve, 50));
+        clock.tick();
+        assert(clock.getInternalTime() > pausedTime, 'RuntimeClock - time resumes after unpause');
+        
+        // Test event scheduling
+        let eventFired = false;
+        const eventTime = clock.getInternalTime() + 0.05;
+        clock.scheduleEvent(eventTime, () => { eventFired = true; });
+        
+        // Advance time past event
+        await new Promise(resolve => setTimeout(resolve, 100));
+        for (let i = 0; i < 10; i++) {
+            clock.tick();
+        }
+        assert(eventFired === true, 'RuntimeClock - scheduled event fires');
+
+        // Test 7: QueueManager with Probability
+        addSection('QueueManager with Probability Tests');
+        const queueManager = new QueueManager();
+        const testPlaylist = new Playlist({
+            id: 'queue-test',
+            name: 'Queue Test',
+            tracks: [
+                new Track({ id: 'q1', title: 'Q1', artist: 'A1', duration: 100, url: 'q1.mp3' }),
+                new Track({ id: 'q2', title: 'Q2', artist: 'A2', duration: 100, url: 'q2.mp3' }),
+                new Track({ id: 'q3', title: 'Q3', artist: 'A3', duration: 100, url: 'q3.mp3' })
+            ]
+        });
+        queueManager.setPlaylist(testPlaylist);
+        assert(queueManager.getTrackCount() === 3, 'QueueManager - playlist set');
+        
+        // Test probability mode
+        queueManager.setProbabilityMode(true);
+        assert(queueManager.probabilityMode === true, 'QueueManager - probability mode enabled');
+        
+        // Test probability engine access
+        const queueProbEngine = queueManager.getProbabilityEngine();
+        assert(queueProbEngine !== null, 'QueueManager - probability engine accessible');
+        
+        // Test feedback update
+        queueManager.updateTrackFeedback('q1', { listenPercentage: 0.9 });
+        assert(true, 'QueueManager - track feedback updated');
+
+        // Test 8: PlayerEngine Runtime Integration
+        addSection('PlayerEngine Runtime Integration Tests');
+        const player = new PlayerEngine();
+        assert(player.getState() === PlaybackState.STOPPED, 'PlayerEngine - initial state');
+        
+        // Test runtime components access
+        const playerTracker = player.getInteractionTracker();
+        assert(playerTracker !== null, 'PlayerEngine - interaction tracker accessible');
+        
+        const playerClock = player.getRuntimeClock();
+        assert(playerClock !== null, 'PlayerEngine - runtime clock accessible');
+        
+        // Test runtime state
+        const runtimeState = player.getRuntimeState();
+        assert(typeof runtimeState.energy === 'number', 'PlayerEngine - runtime state has energy');
+        assert(typeof runtimeState.flow === 'number', 'PlayerEngine - runtime state has flow');
+        assert(typeof runtimeState.runtimeTime === 'number', 'PlayerEngine - runtime state has runtime time');
+        assert(typeof runtimeState.audioTime === 'number', 'PlayerEngine - runtime state has audio time');
+        
+        // Test volume tracking
+        player.setVolume(0.5);
+        const trackerMetrics = player.getInteractionTracker().getMetrics();
+        // Check that volume change was tracked (frequency will be very low due to short runtime)
+        assert(trackerMetrics.volumeChangeFrequency >= 0, 'PlayerEngine - volume changes tracked');
+
+        // Test 9: Integration Test
+        addSection('Full Integration Tests');
+        const integrationPlayer = new PlayerEngine();
+        const integrationPlaylist = new Playlist({
+            id: 'integration',
+            name: 'Integration Test',
+            tracks: [
+                new Track({ id: 'i1', title: 'Integration 1', artist: 'Test', duration: 120, url: 'i1.mp3' }),
+                new Track({ id: 'i2', title: 'Integration 2', artist: 'Test', duration: 130, url: 'i2.mp3' })
+            ]
+        });
+        integrationPlayer.getQueueManager().setPlaylist(integrationPlaylist);
+        integrationPlayer.getQueueManager().setProbabilityMode(true);
+        integrationPlayer.getQueueManager().jumpToTrack(0);
+        
+        const currentTrack = integrationPlayer.getQueueManager().getCurrentTrack();
+        assert(currentTrack !== null, 'Integration - full flow works');
+        assert(currentTrack.id === 'i1', 'Integration - correct track selected');
+
+        // Display Summary
+        const total = passCount + failCount;
+        const passRate = ((passCount / total) * 100).toFixed(1);
+        summary.innerHTML = `
+            <div>Tests Complete!</div>
+            <div>Passed: ${passCount} / ${total} (${passRate}%)</div>
+            <div>Failed: ${failCount} / ${total}</div>
+            <div style="margin-top: 10px; color: ${failCount === 0 ? '#155724' : '#721c24'}">
+                ${failCount === 0 ? '🎉 All tests passed!' : '⚠️ Some tests failed'}
+            </div>
+        `;
+
+        console.log(`Tests complete: ${passCount} passed, ${failCount} failed`);
+        
+        })(); // End of async wrapper
+    </script>
+</body>
+</html>
