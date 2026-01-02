@@ -1,9 +1,17 @@
 import PlaybackState from '../models/PlaybackState.js';
 import HTML5AudioEngine from '../audio/HTML5AudioEngine.js';
 import QueueManager from './QueueManager.js';
+import InteractionTracker from '../runtime/InteractionTracker.js';
+import RuntimeClock from '../runtime/RuntimeClock.js';
 
 /**
- * Player Engine - Core music player with playback control
+ * Music Runtime Engine - Orchestrates musical states and consciousness
+ * 
+ * Not a music player - a runtime engine that:
+ * - Orchestrates states, not just playback
+ * - Responds to observer interaction
+ * - Maintains separate audio and runtime time
+ * - Enables emergent behavior through probability
  */
 class PlayerEngine {
   /**
@@ -18,7 +26,26 @@ class PlayerEngine {
     this.currentTrack = null;
     this.eventListeners = {};
     
+    // Runtime components
+    this.interactionTracker = new InteractionTracker();
+    this.runtimeClock = new RuntimeClock();
+    this._previousVolume = 1.0;
+    this._trackStartTime = 0;
+    
+    // Start runtime clock
+    this._startClockTick();
+    
     this._setupAudioEngineListeners();
+  }
+
+  /**
+   * Start runtime clock tick
+   * @private
+   */
+  _startClockTick() {
+    setInterval(() => {
+      this.runtimeClock.tick();
+    }, 100); // Tick every 100ms
   }
 
   /**
@@ -96,16 +123,28 @@ class PlayerEngine {
   async play(track = null) {
     try {
       if (track) {
+        // Complete previous track if it was playing
+        if (this.currentTrack && this.state === PlaybackState.PLAYING) {
+          const listenTime = this.getCurrentTime();
+          this.interactionTracker.completeTrack(listenTime);
+        }
+        
         // Play specific track
         this.currentTrack = track;
         this.state = PlaybackState.LOADING;
         this._emit('statechange', this.state);
         this._emit('trackchange', track);
         
+        // Track runtime clock state
+        this._trackStartTime = this.runtimeClock.getInternalTime();
+        this.interactionTracker.startTrack(track.duration);
+        this.runtimeClock.resume();
+        
         await this.audioEngine.load(track.url);
         await this.audioEngine.play();
       } else if (this.state === PlaybackState.PAUSED && this.currentTrack) {
         // Resume paused track
+        this.runtimeClock.resume();
         await this.audioEngine.play();
       } else {
         // Play current track from queue
@@ -129,6 +168,14 @@ class PlayerEngine {
    */
   pause() {
     if (this.state === PlaybackState.PLAYING) {
+      const currentTime = this.getCurrentTime();
+      const duration = this.getDuration();
+      const trackProgress = duration > 0 ? currentTime / duration : 0;
+      
+      // Record pause interaction
+      this.interactionTracker.recordPause(trackProgress);
+      this.runtimeClock.pause();
+      
       this.audioEngine.pause();
     }
   }
@@ -155,6 +202,10 @@ class PlayerEngine {
    * @param {number} volume - Volume level (0.0 to 1.0)
    */
   setVolume(volume) {
+    // Record volume change interaction
+    this.interactionTracker.recordVolumeChange(this._previousVolume, volume);
+    this._previousVolume = volume;
+    
     this.audioEngine.setVolume(volume);
     this._emit('volumechange', volume);
   }
@@ -172,7 +223,18 @@ class PlayerEngine {
    * @returns {Promise<void>}
    */
   async next() {
-    const nextTrack = this.queueManager.next();
+    // Record skip if current track was playing
+    if (this.currentTrack && this.state === PlaybackState.PLAYING) {
+      const currentTime = this.getCurrentTime();
+      const duration = this.getDuration();
+      const trackProgress = duration > 0 ? currentTime / duration : 0;
+      this.interactionTracker.recordSkip(trackProgress, this.currentTrack.id);
+    }
+    
+    // Get listening context for probability-based selection
+    const context = this.interactionTracker.getContext();
+    const nextTrack = this.queueManager.next(context);
+    
     if (nextTrack) {
       await this.play(nextTrack);
     } else {
@@ -254,6 +316,39 @@ class PlayerEngine {
    */
   getQueueManager() {
     return this.queueManager;
+  }
+
+  /**
+   * Get interaction tracker
+   * @returns {InteractionTracker} Interaction tracker instance
+   */
+  getInteractionTracker() {
+    return this.interactionTracker;
+  }
+
+  /**
+   * Get runtime clock
+   * @returns {RuntimeClock} Runtime clock instance
+   */
+  getRuntimeClock() {
+    return this.runtimeClock;
+  }
+
+  /**
+   * Get runtime state - includes both audio and runtime time
+   * @returns {Object} Complete runtime state
+   */
+  getRuntimeState() {
+    const context = this.interactionTracker.getContext();
+    return {
+      playbackState: this.state,
+      currentTrack: this.currentTrack,
+      audioTime: this.getCurrentTime(),
+      runtimeTime: this.runtimeClock.getInternalTime(),
+      energy: context.energy,
+      flow: context.flow,
+      context
+    };
   }
 }
 

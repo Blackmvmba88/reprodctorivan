@@ -11,6 +11,11 @@ export { default as HTML5AudioEngine } from './audio/HTML5AudioEngine.js';
 export { default as PlayerEngine } from './core/PlayerEngine.js';
 export { default as QueueManager } from './core/QueueManager.js';
 
+// Runtime (Consciousness Layer)
+export { default as InteractionTracker } from './runtime/InteractionTracker.js';
+export { default as ProbabilityEngine } from './runtime/ProbabilityEngine.js';
+export { default as RuntimeClock } from './runtime/RuntimeClock.js';
+
 // State
 export { default as StateManager } from './state/StateManager.js';
 

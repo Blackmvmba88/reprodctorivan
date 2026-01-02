@@ -1,9 +1,59 @@
-# Modular Music Player
+# Music Runtime Engine
 
-A fully modular music player application with clean architecture and separation of concerns.
+**Not a music player. A consciousness layer over sound.**
+
+A runtime engine that orchestrates musical states, responds to observer interaction, and enables emergent behavior through probability fields.
+
+> 📖 Read the [MANIFESTO](MANIFESTO.md) to understand what this truly is  
+> 🧠 Explore the [PHILOSOPHY](PHILOSOPHY.md) for the conceptual framework
+
+## What Makes This Different
+
+This is **not** another music player. It's a **Music Runtime Engine** that:
+
+- **Orchestrates states**, not just playback sequences
+- **Responds to the observer** - your interactions shape the probability field
+- **Separates audio time from runtime time** - enabling future generative capabilities
+- **Learns without AI** - uses behavioral physics and probability, not neural networks
+- **Enables emergence** - behavior patterns arise from the system, not from rules
+
+## Core Concepts
+
+### 1. Non-Linear Playback
+The next track doesn't come from a list—it emerges from a **probability field** influenced by:
+- How long you listened to the previous track
+- Your volume adjustment patterns  
+- When and why you skip
+- Time of day and context
+- System's learned behavior patterns
+
+### 2. Observer Effect
+Every interaction changes the system's state:
+- Touch volume frequently → system learns you want dynamic control
+- Pause often → energy level decreases, influences track selection
+- Let it play uninterrupted → flow state activates, maintains continuity
+
+### 3. Temporal Decoupling
+- **Audio Time**: Linear progress through the track
+- **Runtime Time**: Engine's internal state clock
+
+This separation enables future capabilities:
+- Smart crossfades that "feel right"
+- Non-synchronized loops
+- Layered soundscapes
+- Real-time generative audio
 
 ## Features
 
+### Runtime Engine Features
+- ✅ **Probability-Based Selection**: Next track chosen from weighted probability field
+- ✅ **Interaction Tracking**: Monitors volume changes, pauses, skips, listen duration
+- ✅ **Energy & Flow States**: System tracks and responds to your listening patterns
+- ✅ **Context Awareness**: Time of day and interaction patterns influence behavior
+- ✅ **Runtime Clock**: Internal timing separate from audio playback
+- ✅ **Emergent Behavior**: Patterns arise from probability, not hard-coded rules
+
+### Traditional Player Features
 - ✅ **Modular Architecture**: Clear separation between core logic, audio engine, UI, and data models
 - ✅ **Complete Player Controls**: Play, pause, stop, seek, next, previous, and volume control
 - ✅ **Playlist Management**: Add, remove, and navigate through tracks
@@ -25,9 +75,13 @@ src/
 ├── audio/               # Audio abstraction layer
 │   ├── AudioEngine.js   # Audio engine interface
 │   └── HTML5AudioEngine.js # HTML5 Audio implementation
-├── core/                # Core player logic
-│   ├── PlayerEngine.js  # Main player engine
-│   └── QueueManager.js  # Queue and playlist management
+├── core/                # Core engine logic
+│   ├── PlayerEngine.js  # Music Runtime Engine (main orchestrator)
+│   └── QueueManager.js  # Probability-based queue management
+├── runtime/             # Runtime consciousness layer
+│   ├── InteractionTracker.js  # User behavior monitoring
+│   ├── ProbabilityEngine.js   # Probability field management
+│   └── RuntimeClock.js        # Internal timing system
 ├── state/               # State management
 │   └── StateManager.js  # Application state manager
 ├── ui/                  # User interface
@@ -43,6 +97,8 @@ src/
 2. The player will load with sample tracks ready to play
 
 ### Using in Your Project
+
+#### Traditional Mode (Linear Playback)
 
 ```javascript
 import { Track, Playlist, PlayerEngine, PlayerUI } from './src/index.js';
@@ -67,11 +123,6 @@ const playlist = new Playlist({
 const player = new PlayerEngine();
 player.getQueueManager().setPlaylist(playlist);
 
-// Create UI (optional)
-const container = document.getElementById('player-container');
-const ui = new PlayerUI(player, container);
-ui.updatePlaylist();
-
 // Control playback
 await player.play();
 player.pause();
@@ -82,28 +133,69 @@ player.setVolume(0.5);
 player.seek(30);
 ```
 
+#### Runtime Engine Mode (Probability-Based)
+
+```javascript
+import { PlayerEngine, Playlist, Track } from './src/index.js';
+
+// Create player
+const player = new PlayerEngine();
+
+// Enable probability-based selection
+player.getQueueManager().setProbabilityMode(true);
+
+// Set up playlist
+const playlist = new Playlist({ id: 'runtime', name: 'Runtime Playlist', tracks: [...] });
+player.getQueueManager().setPlaylist(playlist);
+
+// The system now learns from your interactions
+player.on('trackchange', (track) => {
+    console.log('Playing:', track.title);
+});
+
+// Access runtime state
+setInterval(() => {
+    const state = player.getRuntimeState();
+    console.log('Energy:', state.energy);
+    console.log('Flow:', state.flow);
+    console.log('Runtime Time:', state.runtimeTime);
+    console.log('Audio Time:', state.audioTime);
+}, 5000);
+
+// Get interaction metrics
+const tracker = player.getInteractionTracker();
+const metrics = tracker.getMetrics();
+console.log('Skip rate:', metrics.skipRate);
+console.log('Average listen duration:', metrics.averageListenDuration);
+```
+
 ## API Documentation
 
-### PlayerEngine
+### PlayerEngine (Music Runtime Engine)
 
-Main player controller with full playback control.
+The core orchestrator that manages states, interactions, and consciousness.
 
-**Methods:**
+**Core Methods:**
 - `play(track?)` - Play current or specified track
-- `pause()` - Pause playback
+- `pause()` - Pause playback (records interaction)
 - `stop()` - Stop playback
-- `next()` - Play next track
+- `next()` - Play next track (probability-based if enabled)
 - `previous()` - Play previous track
 - `seek(time)` - Seek to specific time (seconds)
-- `setVolume(volume)` - Set volume (0.0 to 1.0)
+- `setVolume(volume)` - Set volume (0.0 to 1.0, records interaction)
 - `getVolume()` - Get current volume
 - `getState()` - Get playback state
 - `getCurrentTrack()` - Get current track
-- `getCurrentTime()` - Get current playback time
+- `getCurrentTime()` - Get current playback time (audio time)
 - `getDuration()` - Get track duration
-- `getQueueManager()` - Get queue manager instance
 - `on(event, callback)` - Register event listener
 - `off(event, callback)` - Unregister event listener
+
+**Runtime Methods:**
+- `getQueueManager()` - Get queue manager instance
+- `getInteractionTracker()` - Get interaction tracker instance
+- `getRuntimeClock()` - Get runtime clock instance
+- `getRuntimeState()` - Get complete runtime state (energy, flow, times, context)
 
 **Events:**
 - `statechange` - Playback state changed
